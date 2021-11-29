@@ -1,0 +1,167 @@
+* Table API
+
+** Constructors
+
+`emptyTable :: t:Table`
+
+Create an empty table.
+
+  []
+
+`addRows :: t1:Table * rs:Seq<Row> -> t2:Table`
+
+Consumes a Table and a sequence of Row to add, and produces a new Table with the rows from the original table followed by the given Rows.
+
+  #students += [name: "Colton", age: 19, favorite-color: "blue"]
+  #gradebooks += []
+
+`addColumn :: t1:Table * c:ColName * vs:Seq<Value> -> t2:Table`
+
+Consumes a column name and a Seq of values and produces a new Table with the columns of the input Table followed by a column with the given name and values. Note that the length of vs must equal the length of the Table.
+
+  hair-color = [|hair-color| "brown"; "red"; "blonde"]
+  [#students hair-color]
+  presentation = [|presentation| 9; 9; 6]
+  [#gradebooks presentation]
+ 
+`buildColumn :: t1:Table * c:ColName * f:(r:Row -> v:Value) -> t2:Table`
+
+Consumes an existing Table and produces a new Table containing an additional column with the given ColName, using f to compute the values for that column, once for each row.
+
+  is-teenager = [|is-teenager| #students.age > 12 & #students.age < 20]
+  [#students is-teenager]
+  did-well-in-final = [|did-well-in-final| #gradebooks.final > 85]
+  [#gradebooks did-well-in-final]
+  
+`vcat :: t1:Table * t2:Table -> t3:Table`
+
+Combines two tables vertically. The output table starts with rows from the first input table, followed by the rows from the second input table.
+  
+  increase-age = #students
+  increase-age.age := #students.age + 1
+  [#students; increase-age]
+  curve-midterm-and-final = #gradebooks
+  curve-midterm-and-final.midterm := curve-midterm-and-final.midterm + 5
+  curve-midterm-and-final.final := curve-midterm-and-final.final + 5
+  [#gradebooks; curve-midterm-and-final]
+
+`hcat :: t1:Table * t2:Table -> t3:Table`
+
+Combines two tables horizontally. The output table starts with columns from the first input, followed by the columns from the second input.
+
+  [#students #gradebooks{:, 3:..}]
+  [#students{:,3:..} #gradebooks]
+
+`values :: rs:Seq<Row> -> t:Table`
+
+Returns a sequence of one or more rows as a table.
+ 
+  [|name| "Alice"; "Bob"]
+  [|name    age|
+    "Alice" 12
+    "Bob"   13 ]
+
+`crossJoin :: t1:Table * t2:Table -> t3:Table`
+
+Computes the cartesian product of two tables.
+
+`leftJoin :: t1:Table * t2:Table * cs:Seq<ColName> -> t3:Table`
+
+Looks up more information on rows of the first table and add those information to create a new table. The named columns define the keys for looking up. If there is no corresponding row in t2, the extra column will be filled with empty cells.
+
+** Properties
+
+`nrows :: t:Table -> n:Number`
+
+Returns a Number representing the number of rows in the Table.
+
+  []_rows
+  #students-missing_rows
+  
+`ncols :: t:Table -> n:Number`
+ 
+Returns a Number representing the number of columns in the Table.
+ 
+  #students_cols
+  #students-missing_cols
+
+`header :: t:Table -> cs:Seq<ColName>`
+
+Returns a Seq representing the column names in the Table.
+
+  #students_header
+  #gradebooks_header
+
+** Access Subcomponents
+
+`getRow :: t:Table * n:Number -> r:Row`
+ 
+Extracts a row out of a table by a numeric index.
+ 
+  #students{1,:}
+  #gradebooks{2,:}
+   
+`getValue :: r:Row * c:ColName -> v:Value`
+ 
+Retrieves the value for the column c in the row r.
+ 
+  [name: "Bob" age: 12].name
+  [name: "Bob" age: 12].age
+
+`(overloading 1/2) getColumn :: t:Table * n:Number -> vs:Seq<Value>`
+
+Returns a Seq of the values in the indexed column in t.
+
+  #students{:,2}
+  #gradebooks{:,1}
+
+`(overloading 2/2) getColumn :: t:Table * c:ColName -> vs:Seq<Value>`
+
+Returns a Seq of the values in the named column in t.
+
+  #students.age
+  #gradebooks.name
+  
+** Subtable
+
+`(overload 1/2) selectRows :: t1:Table * ns:Seq<Number> -> t2:Table`
+
+Given a Table and a Seq<Number> containing row indices, produces a new Table containing only those rows.
+
+  #students{[3 1 3 2],:}
+  #gradebooks{[2 1],:}
+
+`(overload 2/2) selectRows :: t1:Table * bs:Seq<Boolean> -> t2:Table`  
+ 
+Given a Table and a Seq<Boolean> that represents a predicate on rows, returns a Table with only the rows for which the predicate returns true.
+
+  #students{[true false true],:}
+  #gradebook{[false false true],:}
+
+`(overload 1/3) selectColumns :: t1:Table * bs:Seq<Boolean> -> t2:Table`  
+
+Consumes a Table and a Seq<Boolean> deciding whether each column should be kept, and produces a new Table containing only those columns. The order of the columns is as in the input table.
+
+  #students{:,[true true true]}
+  #gradebooks{:,[true, false, false, false, true, false, false, true]}  
+
+`(overload 2/3) selectColumns :: t1:Table * ns:Seq<Number> -> t2:Table`  
+
+Consumes a Table and a Seq<Number> containing column indices, and produces a new Table containing only those columns. The order of the columns is as given in the input Seq.
+
+  #students{:,[3,2]}
+  #gradebooks{:,[8,1,5]}
+  
+ `(overload 3/3) selectColumns :: t1:Table * cs:Seq<ColName> -> t2:Table`
+ 
+ Consumes a Table and a Seq<ColName> containing column names, and produces a new Table containing only those columns. The order of the columns is as given in the input Seq.
+ 
+   #students{:,[.favorite-color, .age]}
+   #gradebooks{:,[.final, .name, .midterm]}
+   
+ `head :: t1:Table * n:Number -> t2:Table`
+ 
+ Returns the first n rows of the table based on position. For negative values of n, this function returns all rows except the last n rows.
+ 
+   #students{2,:}
+   #students{-3,:}
